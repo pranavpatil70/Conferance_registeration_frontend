@@ -537,8 +537,20 @@ export default function Home() {
         }
 
         @media (max-width: 768px) {
+          .container {
+            padding: 1rem;
+          }
+
+          .header {
+            margin-bottom: 2rem;
+          }
+
           .header h1 {
-            font-size: 2rem;
+            font-size: 1.8rem;
+          }
+
+          .header p {
+            font-size: 1.1rem;
           }
 
           .button-group {
@@ -547,10 +559,16 @@ export default function Home() {
 
           .register-button {
             width: 100%;
+            padding: 1.5rem 2rem;
+            font-size: 1.1rem;
           }
 
           .form-container {
-            padding: 2rem;
+            padding: 1.5rem;
+          }
+
+          .form-header h2 {
+            font-size: 1.8rem;
           }
 
           .form-actions {
@@ -558,13 +576,80 @@ export default function Home() {
             bottom: 0;
             background: white;
             padding: 1rem 0;
-            margin: -2rem -2rem 0;
+            margin: -1.5rem -1.5rem 0;
             border-top: 1px solid #e0e0e0;
           }
 
           .form-actions .btn {
             min-height: 48px;
-            font-size: 1.2rem;
+            font-size: 1.1rem;
+          }
+
+          .success-message {
+            padding: 2rem;
+          }
+
+          .success-message h2 {
+            font-size: 2.2rem;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .container {
+            padding: 0.5rem;
+          }
+
+          .header h1 {
+            font-size: 1.5rem;
+          }
+
+          .header p {
+            font-size: 1rem;
+          }
+
+          .register-button {
+            padding: 1.2rem 1.5rem;
+            font-size: 1rem;
+          }
+
+          .form-container {
+            padding: 1rem;
+          }
+
+          .form-header h2 {
+            font-size: 1.5rem;
+          }
+
+          .form-group input {
+            padding: 0.8rem;
+            font-size: 0.95rem;
+          }
+
+          .btn {
+            padding: 0.8rem 1.5rem;
+            font-size: 1rem;
+          }
+
+          .success-message {
+            padding: 1.5rem;
+          }
+
+          .success-message h2 {
+            font-size: 1.8rem;
+          }
+
+          .success-message p {
+            font-size: 1rem;
+          }
+
+          .checkmark {
+            width: 50px;
+            height: 50px;
+          }
+
+          .checkmark::after {
+            font-size: 1.5rem;
+            line-height: 50px;
           }
         }
       `}</style>
