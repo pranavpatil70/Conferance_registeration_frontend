@@ -625,9 +625,18 @@ export default function Home() {
             font-size: 0.95rem;
           }
 
+          .form-actions {
+            flex-direction: column;
+            gap: 0.5rem;
+            position: static;
+            padding: 0;
+            margin: 2rem -1rem 0;
+          }
+
           .btn {
             padding: 0.8rem 1.5rem;
             font-size: 1rem;
+            flex: none;
           }
 
           .success-message {
