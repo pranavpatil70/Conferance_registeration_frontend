@@ -1,12 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-
-const API_URL = '/api';
+import { supabase } from '@/lib/supabase';
 
 export default function Admin() {
   const [stats, setStats] = useState({ total: 0, students: 0, professionals: 0 });
-  const [registrations, setRegistrations] = useState([]);
+  const [registrations, setRegistrations] = useState<any[]>([]);
   const [filter, setFilter] = useState('all');
   const [sortBy, setSortBy] = useState('date-desc');
   const [loading, setLoading] = useState(true);
@@ -18,32 +17,50 @@ export default function Admin() {
 
     try {
       // Fetch statistics
-      const statsResponse = await fetch(`${API_URL}/statistics`);
-      const statsData = await statsResponse.json();
+      const { count: total, error: totalError } = await supabase
+        .from('registrations')
+        .select('*', { count: 'exact', head: true });
 
-      if (statsData.success) {
-        setStats(statsData.data);
-      }
+      if (totalError) throw totalError;
+
+      const { count: students, error: studentsError } = await supabase
+        .from('registrations')
+        .select('*', { count: 'exact', head: true })
+        .eq('registration_type', 'student');
+
+      if (studentsError) throw studentsError;
+
+      const { count: professionals, error: professionalsError } = await supabase
+        .from('registrations')
+        .select('*', { count: 'exact', head: true })
+        .eq('registration_type', 'professional');
+
+      if (professionalsError) throw professionalsError;
+
+      setStats({
+        total: total || 0,
+        students: students || 0,
+        professionals: professionals || 0
+      });
 
       // Fetch registrations
       const [sortField, sortOrder] = sortBy.split('-');
-      const queryParams = new URLSearchParams();
+      let query = supabase
+        .from('registrations')
+        .select('*')
+        .order(sortField === 'date' ? 'created_at' : 'name', { ascending: sortOrder === 'asc' });
 
       if (filter !== 'all') {
-        queryParams.append('type', filter);
+        query = query.eq('registration_type', filter);
       }
 
-      queryParams.append('sortBy', sortField === 'date' ? 'created_at' : 'name');
-      queryParams.append('order', sortOrder.toUpperCase());
+      const { data, error } = await query;
 
-      const regsResponse = await fetch(`${API_URL}/registrations?${queryParams}`);
-      const regsData = await regsResponse.json();
+      if (error) throw error;
 
-      if (regsData.success) {
-        setRegistrations(regsData.data);
-      }
+      setRegistrations(data || []);
     } catch (err: any) {
-      setError('Failed to fetch data. Please ensure the backend server is running.');
+      setError('Failed to fetch data from Supabase.');
       console.error('Error:', err);
     } finally {
       setLoading(false);
