@@ -79,6 +79,24 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get('type');
     const sortBy = searchParams.get('sortBy') || 'created_at';
     const order = searchParams.get('order') || 'DESC';
+    const checkEmail = searchParams.get('checkEmail');
+
+    // Handle email availability check
+    if (checkEmail) {
+      const { data: existing, error: checkError } = await supabase
+        .from('registrations')
+        .select('id')
+        .eq('email', checkEmail)
+        .single();
+
+      if (checkError && checkError.code !== 'PGRST116') { // PGRST116 is no rows found
+        throw checkError;
+      }
+
+      return NextResponse.json({
+        available: !existing
+      });
+    }
 
     let query = supabase
       .from('registrations')

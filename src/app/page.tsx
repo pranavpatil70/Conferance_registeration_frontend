@@ -14,17 +14,92 @@ export default function Home() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({
+    name: '',
+    email: '',
+    company: '',
+    phone: ''
+  });
+  const [emailChecking, setEmailChecking] = useState(false);
+  const [submittedData, setSubmittedData] = useState<{ email: string; type: string } | null>(null);
+
+  const formatPhone = (value: string) => {
+    // Remove all non-digit characters
+    const digits = value.replace(/\D/g, '');
+    // Format as XXXXX XXXXX
+    if (digits.length >= 10) {
+      return `${digits.slice(0, 5)} ${digits.slice(5, 10)}`;
+    } else if (digits.length >= 5) {
+      return `${digits.slice(0, 5)} ${digits.slice(5)}`;
+    } else {
+      return digits;
+    }
+  };
+
+  const validateEmail = async (email: string) => {
+    if (!email) return 'Email is required';
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) return 'Invalid email format';
+
+    setEmailChecking(true);
+    try {
+      const response = await fetch(`${API_URL}/registrations?checkEmail=${encodeURIComponent(email)}`);
+      const data = await response.json();
+      if (!data.available) return 'Email is already registered';
+    } catch (err) {
+      return 'Unable to verify email';
+    } finally {
+      setEmailChecking(false);
+    }
+    return '';
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    let formattedValue = value;
+
+    if (name === 'phone') {
+      formattedValue = formatPhone(value);
+    }
+
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [name]: formattedValue
+    });
+
+    // Clear field error on change
+    if (fieldErrors[name as keyof typeof fieldErrors]) {
+      setFieldErrors({
+        ...fieldErrors,
+        [name]: ''
+      });
+    }
+  };
+
+  const handleEmailBlur = async () => {
+    const error = await validateEmail(formData.email);
+    setFieldErrors({
+      ...fieldErrors,
+      email: error
     });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    // Check for field errors
+    const errors = { ...fieldErrors };
+    if (!formData.name.trim()) errors.name = 'Name is required';
+    if (!formData.email.trim()) errors.email = 'Email is required';
+    else if (fieldErrors.email) errors.email = fieldErrors.email; // Keep async error
+    if (view === 'professional' && !formData.company.trim()) errors.company = 'Company is required';
+
+    setFieldErrors(errors);
+
+    // If any errors, don't submit
+    if (Object.values(errors).some(err => err)) return;
+
     setLoading(true);
 
     try {
@@ -50,8 +125,10 @@ export default function Home() {
         throw new Error(data.error || 'Registration failed');
       }
 
+      setSubmittedData({ email: formData.email, type: registrationType });
       setView('success');
       setFormData({ name: '', email: '', company: '', phone: '' });
+      setFieldErrors({ name: '', email: '', company: '', phone: '' });
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -63,11 +140,13 @@ export default function Home() {
     setView('landing');
     setFormData({ name: '', email: '', company: '', phone: '' });
     setError('');
+    setFieldErrors({ name: '', email: '', company: '', phone: '' });
   };
 
   const handleRegisterAnother = () => {
     setView('landing');
     setFormData({ name: '', email: '', company: '', phone: '' });
+    setFieldErrors({ name: '', email: '', company: '', phone: '' });
   };
 
   return (
@@ -278,6 +357,17 @@ export default function Home() {
           box-shadow: 0 0 0 3px rgba(0, 78, 137, 0.1);
         }
 
+        .form-group .field-error {
+          color: var(--error);
+          font-size: 0.85rem;
+          margin-top: 0.25rem;
+          display: block;
+        }
+
+        .form-group input.error {
+          border-color: var(--error);
+        }
+
         .form-actions {
           display: flex;
           gap: 1rem;
@@ -343,7 +433,50 @@ export default function Home() {
 
         .success-message p {
           font-size: 1.2rem;
-          margin-bottom: 2rem;
+          margin-bottom: 1rem;
+        }
+
+        .checkmark {
+          display: inline-block;
+          width: 60px;
+          height: 60px;
+          border-radius: 50%;
+          background: white;
+          margin-bottom: 1rem;
+          animation: checkmark 0.6s ease-out;
+        }
+
+        .checkmark::after {
+          content: '✓';
+          display: block;
+          font-size: 2rem;
+          color: var(--success);
+          text-align: center;
+          line-height: 60px;
+          animation: checkmark-check 0.6s ease-out 0.3s both;
+        }
+
+        @keyframes checkmark {
+          0% {
+            transform: scale(0);
+          }
+          50% {
+            transform: scale(1.2);
+          }
+          100% {
+            transform: scale(1);
+          }
+        }
+
+        @keyframes checkmark-check {
+          0% {
+            opacity: 0;
+            transform: scale(0);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1);
+          }
         }
 
         .error-message {
@@ -419,6 +552,20 @@ export default function Home() {
           .form-container {
             padding: 2rem;
           }
+
+          .form-actions {
+            position: sticky;
+            bottom: 0;
+            background: white;
+            padding: 1rem 0;
+            margin: -2rem -2rem 0;
+            border-top: 1px solid #e0e0e0;
+          }
+
+          .form-actions .btn {
+            min-height: 48px;
+            font-size: 1.2rem;
+          }
         }
       `}</style>
 
@@ -473,9 +620,11 @@ export default function Home() {
                   name="name"
                   value={formData.name}
                   onChange={handleInputChange}
+                  className={fieldErrors.name ? 'error' : ''}
                   required
                   placeholder="Enter your full name"
                 />
+                {fieldErrors.name && <span className="field-error">{fieldErrors.name}</span>}
               </div>
 
               <div className="form-group">
@@ -487,9 +636,13 @@ export default function Home() {
                   name="email"
                   value={formData.email}
                   onChange={handleInputChange}
+                  onBlur={handleEmailBlur}
+                  className={fieldErrors.email ? 'error' : ''}
                   required
                   placeholder="your.email@example.com"
                 />
+                {fieldErrors.email && <span className="field-error">{fieldErrors.email}</span>}
+                {emailChecking && <span className="field-error">Checking availability...</span>}
               </div>
 
               {view === 'professional' && (
@@ -502,9 +655,11 @@ export default function Home() {
                     name="company"
                     value={formData.company}
                     onChange={handleInputChange}
+                    className={fieldErrors.company ? 'error' : ''}
                     required
                     placeholder="Your company name"
                   />
+                  {fieldErrors.company && <span className="field-error">{fieldErrors.company}</span>}
                 </div>
               )}
 
@@ -517,7 +672,7 @@ export default function Home() {
                   name="phone"
                   value={formData.phone}
                   onChange={handleInputChange}
-                  placeholder="+1 (555) 123-4567"
+                  placeholder="12345 67890"
                 />
               </div>
 
@@ -541,11 +696,11 @@ export default function Home() {
           </div>
         )}
 
-        {view === 'success' && (
+        {view === 'success' && submittedData && (
           <div className="success-message">
-            <h2>🎉 Success!</h2>
-            <p>Your registration has been confirmed.</p>
-            <p>We'll send you a confirmation email shortly.</p>
+            <div className="checkmark"></div>
+            <h2>Success!</h2>
+            <p>You've been registered as a {submittedData.type === 'student' ? 'Student' : 'Professional'}.</p>
             <button
               className="btn btn-primary"
               onClick={handleRegisterAnother}
